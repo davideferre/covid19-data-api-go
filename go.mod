@@ -2,13 +2,13 @@ module covid19-data-api-go
 
 go 1.17
 
-require github.com/influxdata/influxdb-client-go/v2 v2.5.1
-
 require (
-	github.com/deepmap/oapi-codegen v1.8.2 // indirect
-	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab // indirect
-	github.com/influxdata/line-protocol v0.0.0-20200327222509-2487e7298839 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
-	golang.org/x/net v0.0.0-20210119194325-5f4716e94777 // indirect
+	github.com/gin-gonic/gin v1.7.4
+	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
+	github.com/kr/pretty v0.1.0 // indirect
+	github.com/stretchr/testify v1.5.1 // indirect
+	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad // indirect
+	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c // indirect
+	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 )
