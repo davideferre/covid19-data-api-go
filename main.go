@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	client "github.com/influxdata/influxdb1-client/v2"
 	"github.com/joho/godotenv"
@@ -28,6 +29,7 @@ func main() {
 	INFLUX_ADDRESS = os.Getenv("INFLUX_ADDRESS")
 
 	router := gin.Default()
+	router.Use(cors.Default())
 	router.GET("/api/v2/data/nations", nations)
 	router.Run(HTTP_LISTEN)
 }
@@ -44,10 +46,10 @@ func nations(ctx *gin.Context) {
 
 	q := client.NewQuery("SELECT * FROM nation ORDER BY time ASC", "dati", "")
 	if response, err := c.Query(q); err == nil && response.Error() == nil {
-		results := make(map[string][]map[string]string)
+		results := []gin.H{}
 		for _, s := range response.Results[0].Series {
 			for _, v := range s.Values {
-				m := make(map[string]string)
+				m := make(gin.H)
 				for k := range v {
 					if v[k] != nil {
 						m[s.Columns[k]] = fmt.Sprintf("%s", v[k])
@@ -55,10 +57,9 @@ func nations(ctx *gin.Context) {
 						m[s.Columns[k]] = "0"
 					}
 				}
-				time := m["time"]
-				results[time] = append(results[time], m)
+				results = append(results, m)
 			}
 		}
-		ctx.JSON(http.StatusOK, results)
+		ctx.JSON(http.StatusOK, gin.H{"nations": results})
 	}
 }
