@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -14,6 +15,9 @@ import (
 
 var HTTP_LISTEN string
 var INFLUX_ADDRESS string
+var RELEASE_MODE bool
+
+var influxClient client.Client
 
 func main() {
 	/*
@@ -27,6 +31,23 @@ func main() {
 	}
 	HTTP_LISTEN = os.Getenv("HTTP_LISTEN")
 	INFLUX_ADDRESS = os.Getenv("INFLUX_ADDRESS")
+	RELEASE_MODE, _ = strconv.ParseBool(os.Getenv("RELEASE_MODE"))
+
+	/*
+		initializing influx connection
+	*/
+	var err error
+	influxClient, err = client.NewHTTPClient(client.HTTPConfig{
+		Addr: INFLUX_ADDRESS,
+	})
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	defer influxClient.Close()
+
+	if RELEASE_MODE {
+		gin.SetMode(gin.ReleaseMode)
+	}
 
 	router := gin.Default()
 	router.Use(cors.Default())
@@ -35,17 +56,17 @@ func main() {
 }
 
 func nations(ctx *gin.Context) {
-	c, err := client.NewHTTPClient(client.HTTPConfig{
-		Addr: INFLUX_ADDRESS,
-	})
-	if err != nil {
-		fmt.Println("Error creating InfluxDB Client: ", err.Error())
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-	}
-	defer c.Close()
+	get_results("SELECT * FROM nation", ctx)
+}
 
-	q := client.NewQuery("SELECT * FROM nation ORDER BY time ASC", "dati", "")
-	if response, err := c.Query(q); err == nil && response.Error() == nil {
+func get_results(query string, ctx *gin.Context) {
+	q := client.NewQuery(query, "dati", "")
+	response, err := influxClient.Query(q)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	} else if response.Error() != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	} else {
 		results := []gin.H{}
 		for _, s := range response.Results[0].Series {
 			for _, v := range s.Values {
@@ -55,6 +76,9 @@ func nations(ctx *gin.Context) {
 						m[s.Columns[k]] = fmt.Sprintf("%s", v[k])
 					} else {
 						m[s.Columns[k]] = "0"
+					}
+					if s.Columns[k] == "time" {
+						m["id"] = fmt.Sprintf("%s", v[k])
 					}
 				}
 				results = append(results, m)
