@@ -15,6 +15,7 @@ import (
 
 var HTTP_LISTEN string
 var INFLUX_ADDRESS string
+var INFLUX_DB_NAME string
 var RELEASE_MODE bool
 
 var influxClient client.Client
@@ -31,6 +32,7 @@ func main() {
 	}
 	HTTP_LISTEN = os.Getenv("HTTP_LISTEN")
 	INFLUX_ADDRESS = os.Getenv("INFLUX_ADDRESS")
+	INFLUX_DB_NAME = os.Getenv("INFLUX_DB_NAME")
 	RELEASE_MODE, _ = strconv.ParseBool(os.Getenv("RELEASE_MODE"))
 
 	/*
@@ -56,16 +58,16 @@ func main() {
 }
 
 func nations(ctx *gin.Context) {
-	get_results("SELECT * FROM nation", ctx)
+	get_results("SELECT * FROM nation", "nations", ctx)
 }
 
-func get_results(query string, ctx *gin.Context) {
-	q := client.NewQuery(query, "dati", "")
+func get_results(query string, results_name string, ctx *gin.Context) {
+	q := client.NewQuery(query, INFLUX_DB_NAME, "")
 	response, err := influxClient.Query(q)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 	} else if response.Error() != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Response error"})
 	} else {
 		results := []gin.H{}
 		for _, s := range response.Results[0].Series {
@@ -84,6 +86,6 @@ func get_results(query string, ctx *gin.Context) {
 				results = append(results, m)
 			}
 		}
-		ctx.JSON(http.StatusOK, gin.H{"nations": results})
+		ctx.JSON(http.StatusOK, gin.H{results_name: results})
 	}
 }
